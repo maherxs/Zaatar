@@ -42,6 +42,7 @@ repo --name=zaatar-local --baseurl=file:///root/rpmbuild/RPMS/
 @core
 @hardware-support
 @base-x
+dracut-live
 
 # دعم اللغتين
 glibc-langpack-ar
