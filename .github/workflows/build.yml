@@ -129,7 +129,7 @@ jobs:
         run: createrepo_c ~/rpmbuild/RPMS/
 
       - name: Create output directory
-        run: mkdir -p output/${{ matrix.variant.name }} /tmp/lmc-${{ matrix.variant.name }}
+        run: mkdir -p output /tmp/lmc-${{ matrix.variant.name }}
 
       - name: Build ISO
         run: |
