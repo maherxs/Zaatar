@@ -22,7 +22,7 @@ rootpw --lock
 user --name=user --gecos="Zaatar User" --groups=wheel --password=changeme --plaintext
 
 # ── القرص ───────────────────────────────────────────────────
-autopart --type=lvm
+part / --size=15360 --fstype=ext4
 clearpart --all --initlabel
 bootloader --location=mbr
 
