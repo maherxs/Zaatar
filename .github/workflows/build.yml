@@ -10,13 +10,10 @@ on:
       variant:
         description: "Variant to build"
         required: true
-        default: "all"
+        default: "desktop"
         type: choice
         options:
-          - all
           - desktop
-          - laptop
-          - server
 
 # ────────────────────────────────────────────────────────────
 # Variables
@@ -33,22 +30,19 @@ jobs:
   # ── Job 1: Validate Kickstart files ──────────────────────
   validate:
     name: "Validate Kickstart Files"
-    runs-on: [self-hosted, fedora-builder]
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:41
+      options: --privileged -v /dev:/dev
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Install pykickstart
-        run: sudo dnf install -y pykickstart
+        run: dnf install -y pykickstart
 
       - name: Validate Desktop KS
         run: ksvalidator kickstarts/zaatar-desktop.ks
-
-      - name: Validate Laptop KS
-        run: ksvalidator kickstarts/zaatar-laptop.ks
-
-      - name: Validate Server KS
-        run: ksvalidator kickstarts/zaatar-server.ks
 
       - name: Report
         run: echo "All Kickstart files validated successfully"
@@ -56,14 +50,17 @@ jobs:
   # ── Job 2: Build RPM Branding ─────────────────────────────
   build-rpm:
     name: "Build RPM Branding"
-    runs-on: [self-hosted, fedora-builder]
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:41
+      options: --privileged -v /dev:/dev
     needs: validate
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Install tools
-        run: sudo dnf install -y rpm-build rpmdevtools createrepo_c
+        run: dnf install -y rpm-build rpmdevtools createrepo_c
 
       - name: Setup rpmbuild tree
         run: rpmdev-setuptree
@@ -92,7 +89,10 @@ jobs:
   # ── Job 3: Build ISOs ─────────────────────────────────────
   build-iso:
     name: "Build ISO — ${{ matrix.variant.name }}"
-    runs-on: [self-hosted, fedora-builder]
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:41
+      options: --privileged -v /dev:/dev
     needs: build-rpm
     strategy:
       fail-fast: false
@@ -103,16 +103,6 @@ jobs:
             iso: zaatar-desktop-1.0-x86_64.iso
             volid: ZAATAR_DESKTOP
             size_hint: "2.1 GB"
-          - name: laptop
-            ks: kickstarts/zaatar-laptop.ks
-            iso: zaatar-laptop-1.0-x86_64.iso
-            volid: ZAATAR_LAPTOP
-            size_hint: "2.0 GB"
-          - name: server
-            ks: kickstarts/zaatar-server.ks
-            iso: zaatar-server-1.0-x86_64.iso
-            volid: ZAATAR_SERVER
-            size_hint: "850 MB"
 
     steps:
       - name: Checkout
@@ -129,7 +119,7 @@ jobs:
 
       - name: Install build tools
         run: |
-          sudo dnf install -y \
+          dnf install -y \
             lorax \
             livecd-tools \
             pykickstart \
@@ -142,7 +132,7 @@ jobs:
 
       - name: Build ISO
         run: |
-          sudo livemedia-creator \
+          livemedia-creator \
             --ks ${{ matrix.variant.ks }} \
             --no-virt \
             --resultdir output/${{ matrix.variant.name }} \
@@ -178,7 +168,10 @@ jobs:
   # ── Job 4: Publish to Release ─────────────────────────────
   publish:
     name: "Publish to GitHub Release"
-    runs-on: [self-hosted, fedora-builder]
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:41
+      options: --privileged -v /dev:/dev
     needs: build-iso
     if: github.event_name == 'release'
     steps:
@@ -186,18 +179,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: zaatar-desktop-iso
-          path: release/
-
-      - name: Download Laptop ISO
-        uses: actions/download-artifact@v4
-        with:
-          name: zaatar-laptop-iso
-          path: release/
-
-      - name: Download Server ISO
-        uses: actions/download-artifact@v4
-        with:
-          name: zaatar-server-iso
           path: release/
 
       - name: Download RPM
@@ -219,14 +200,10 @@ jobs:
             | Edition | File | Size |
             |---------|------|------|
             | Desktop | `zaatar-desktop-1.0-x86_64.iso` | ~2.1 GB |
-            | Laptop  | `zaatar-laptop-1.0-x86_64.iso`  | ~2.0 GB |
-            | Server  | `zaatar-server-1.0-x86_64.iso`  | ~850 MB |
             
             ### Verify
             ```bash
             sha256sum -c zaatar-desktop-1.0-x86_64.iso.sha256
-            sha256sum -c zaatar-laptop-1.0-x86_64.iso.sha256
-            sha256sum -c zaatar-server-1.0-x86_64.iso.sha256
             ```
             
             ### Test before installing
