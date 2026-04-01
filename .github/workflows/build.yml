@@ -114,9 +114,6 @@ jobs:
           name: zaatar-branding-rpm
           path: ~/rpmbuild/RPMS/
 
-      - name: Rebuild local repo
-        run: createrepo_c ~/rpmbuild/RPMS/
-
       - name: Install build tools
         run: |
           dnf install -y \
@@ -125,7 +122,11 @@ jobs:
             pykickstart \
             isomd5sum \
             anaconda \
-            anaconda-tui
+            anaconda-tui \
+            createrepo_c
+
+      - name: Rebuild local repo
+        run: createrepo_c ~/rpmbuild/RPMS/
 
       - name: Create output directory
         run: mkdir -p output/${{ matrix.variant.name }} /tmp/lmc-${{ matrix.variant.name }}
