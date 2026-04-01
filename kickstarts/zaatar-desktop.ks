@@ -4,7 +4,7 @@
 # ============================================================
 
 
-graphical
+
 reboot
 
 # ── اللغة: عربي + إنجليزي ───────────────────────────────────
@@ -27,6 +27,7 @@ clearpart --all --initlabel
 bootloader --location=mbr
 
 # ── المستودعات ──────────────────────────────────────────────
+url --metalink=https://mirrors.fedoraproject.org/metalink?repo=fedora-41&arch=$basearch
 repo --name=fedora  --metalink=https://mirrors.fedoraproject.org/metalink?repo=fedora-41&arch=$basearch
 repo --name=updates --metalink=https://mirrors.fedoraproject.org/metalink?repo=updates-released-f41&arch=$basearch
 repo --name=rpmfusion-free    --baseurl=https://download1.rpmfusion.org/free/fedora/releases/41/Everything/x86_64/os/
