@@ -3,13 +3,13 @@
 # Based on Fedora 41 · KDE Plasma · Wayland · x86_64
 # ============================================================
 
-install
+
 graphical
 reboot
 
 # ── اللغة: عربي + إنجليزي ───────────────────────────────────
 lang ar_SA.UTF-8
-langsupport --default=ar_SA.UTF-8 en_US.UTF-8 ar_SA.UTF-8
+
 keyboard --vckeymap=us --xlayouts='us','ara' --switch='grp:alt_shift_toggle'
 timezone Asia/Riyadh --utc
 
