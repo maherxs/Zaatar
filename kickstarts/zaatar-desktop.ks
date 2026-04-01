@@ -4,29 +4,28 @@
 # ============================================================
 
 
-
 reboot
 
-# ── اللغة: عربي + إنجليزي ───────────────────────────────────
-lang ar_SA.UTF-8
+# ── Language ────────────────────────────────────────────────
+lang en_US.UTF-8
 
-keyboard --vckeymap=us --xlayouts='us','ara' --switch='grp:alt_shift_toggle'
-timezone Asia/Riyadh --utc
+keyboard --vckeymap=us
+timezone UTC --utc
 
-# ── الشبكة ──────────────────────────────────────────────────
+# ── Network ─────────────────────────────────────────────────
 network --bootproto=dhcp --device=link --activate
 network --hostname=zaatar
 
-# ── المستخدمين ──────────────────────────────────────────────
+# ── Users ───────────────────────────────────────────────────
 rootpw --lock
 user --name=user --gecos="Zaatar User" --groups=wheel --password=changeme --plaintext
 
-# ── القرص ───────────────────────────────────────────────────
+# ── Disk Partitioning ───────────────────────────────────────
 part / --size=15360 --fstype=ext4
 clearpart --all --initlabel
 bootloader --location=mbr
 
-# ── المستودعات ──────────────────────────────────────────────
+# ── Repositories ────────────────────────────────────────────
 url --metalink=https://mirrors.fedoraproject.org/metalink?repo=fedora-41&arch=$basearch
 repo --name=fedora  --metalink=https://mirrors.fedoraproject.org/metalink?repo=fedora-41&arch=$basearch
 repo --name=updates --metalink=https://mirrors.fedoraproject.org/metalink?repo=updates-released-f41&arch=$basearch
@@ -35,18 +34,16 @@ repo --name=rpmfusion-nonfree --baseurl=https://download1.rpmfusion.org/nonfree/
 repo --name=zaatar-local --baseurl=file:///root/rpmbuild/RPMS/
 
 # ============================================================
-# الحزم
+# Packages
 # ============================================================
 %packages
 
-# ── النظام الأساسي ──────────────────────────────────────────
+# ── Core System ─────────────────────────────────────────────
 @core
 @hardware-support
 @base-x
 dracut-live
 
-# دعم اللغتين
-glibc-langpack-ar
 glibc-langpack-en
 ibus
 ibus-typing-booster
@@ -65,7 +62,7 @@ sddm-kcm
 polkit-kde
 kde-settings-pulseaudio
 
-# تطبيقات KDE الأساسية
+# ── KDE Core Applications ───────────────────────────────────
 dolphin
 konsole
 krunner
@@ -84,19 +81,19 @@ bluez
 bluez-tools
 wpa_supplicant
 
-# ── الصوت (PipeWire) ─────────────────────────────────────────
+# ── Audio (PipeWire) ────────────────────────────────────────
 pipewire
 pipewire-alsa
 pipewire-pulseaudio
 wireplumber
 
-# ── Flatpak + Flathub ────────────────────────────────────────
+# ── Flatpak + Flathub ───────────────────────────────────────
 flatpak
 xdg-desktop-portal
 xdg-desktop-portal-kde
 xdg-user-dirs
 
-# ── Codecs (لازمة لتشغيل أي وسائط) ─────────────────────────
+# ── Multimedia Codecs ───────────────────────────────────────
 gstreamer1-plugins-base
 gstreamer1-plugins-good
 gstreamer1-plugins-bad-free
@@ -106,12 +103,12 @@ gstreamer1-plugins-ugly-free
 ffmpeg
 vlc
 
-# ── جدار الحماية + الأمان ───────────────────────────────────
+# ── Firewall & Security ─────────────────────────────────────
 firewalld
 dnf-automatic
 fwupd
 
-# ── أدوات النظام الأساسية ───────────────────────────────────
+# ── Basic System Tools ──────────────────────────────────────
 curl
 wget
 zip
@@ -119,18 +116,15 @@ unzip
 tar
 bash-completion
 
-# ── الخطوط (عربي + إنجليزي) ─────────────────────────────────
-google-noto-sans-arabic-fonts
-google-noto-kufi-arabic-fonts
-google-noto-serif-arabic-fonts
+# ── Fonts ───────────────────────────────────────────────────
 google-noto-sans-fonts
 liberation-fonts
 dejavu-fonts-all
 
-# ── برندينج Zaatar ───────────────────────────────────────────
+# ── Zaatar Branding ─────────────────────────────────────────
 zaatar-branding
 
-# ── حذف غير الضروري ─────────────────────────────────────────
+# ── Remove unnecessary packages ─────────────────────────────
 -fedora-logos
 -fedora-release-notes
 -abrt
@@ -153,14 +147,14 @@ zaatar-branding
 %end
 
 # ============================================================
-# ما بعد التثبيت
+# Post-Install
 # ============================================================
 %post --log=/var/log/zaatar-post-install.log
 set -e
 
 echo "==> Zaatar Linux — Post Install Starting..."
 
-# ── هوية النظام — Zaatar في كل مكان ─────────────────────────
+# ── System Identity ─────────────────────────────────────────
 cat > /etc/os-release << 'EOF'
 NAME="Zaatar Linux"
 VERSION="1.0 (Thyme)"
@@ -186,37 +180,35 @@ EOF
 cat > /etc/motd << 'EOF'
 
   Zaatar Linux 1.0 (Thyme)
-  مرحباً بك في نظام زعتر لينكس
+  Welcome to Zaatar Linux
 
 EOF
 
-# اسم النظام في GRUB
+# ── Set system name in GRUB ─────────────────────────────────
 sed -i 's/^GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="Zaatar Linux"/' /etc/default/grub 2>/dev/null || true
 
-# ── اللغة الافتراضية ─────────────────────────────────────────
+# ── Default Locale ──────────────────────────────────────────
 cat > /etc/locale.conf << 'EOF'
-LANG=ar_SA.UTF-8
-LC_MESSAGES=en_US.UTF-8
+LANG=en_US.UTF-8
 EOF
 
-# ── الكيبورد: عربي + إنجليزي (Alt+Shift للتبديل) ────────────
+# ── Keyboard Layout ─────────────────────────────────────────
 cat > /etc/X11/xorg.conf.d/00-keyboard.conf << 'EOF'
 Section "InputClass"
     Identifier "system-keyboard"
     MatchIsKeyboard "on"
-    Option "XkbLayout" "us,ara"
-    Option "XkbOptions" "grp:alt_shift_toggle"
+    Option "XkbLayout" "us"
 EndSection
 EOF
 
-# ── KDE: لغة + كيبورد ───────────────────────────────────────
+# ── KDE Locales ─────────────────────────────────────────────
 mkdir -p /etc/xdg
 cat > /etc/xdg/plasma-localerc << 'EOF'
 [Formats]
-LANG=ar_SA.UTF-8
+LANG=en_US.UTF-8
 
 [Translations]
-LANGUAGE=ar:en_US
+LANGUAGE=en_US
 EOF
 
 # ── SDDM + Wayland ──────────────────────────────────────────
@@ -233,18 +225,18 @@ GreeterEnvironment=QT_WAYLAND_SHELL_INTEGRATION=layer-shell
 Current=zaatar
 EOF
 
-# ── Flatpak + Flathub (كامل) ────────────────────────────────
+# ── Flatpak + Flathub ───────────────────────────────────────
 flatpak remote-add --system --if-not-exists flathub \
     https://dl.flathub.org/repo/flathub.flatpakrepo
 
-# ── PipeWire (الصوت) ─────────────────────────────────────────
+# ── Audio (PipeWire) ────────────────────────────────────────
 systemctl --global enable pipewire pipewire-pulse wireplumber
 
-# ── جدار الحماية ────────────────────────────────────────────
+# ── Firewall ────────────────────────────────────────────────
 systemctl enable firewalld
 firewall-offline-cmd --set-default-zone=public
 
-# ── تحديثات الأمان تلقائياً ─────────────────────────────────
+# ── Automatic Security Updates ──────────────────────────────
 cat > /etc/dnf/automatic.conf << 'EOF'
 [commands]
 upgrade_type = security
@@ -260,11 +252,11 @@ systemctl enable dnf-automatic.timer
 # ── fwupd ───────────────────────────────────────────────────
 systemctl enable fwupd
 
-# ── NetworkManager + Bluetooth ───────────────────────────────
+# ── NetworkManager + Bluetooth ──────────────────────────────
 systemctl enable NetworkManager
 systemctl enable bluetooth
 
-# ── تنظيف ───────────────────────────────────────────────────
+# ── Clean up ────────────────────────────────────────────────
 dnf clean all
 
 echo "==> Zaatar Linux — Post Install Done."

@@ -1,1 +1,8 @@
-placeholder
+[Plymouth Theme]
+Name=Zaatar
+Description=Zaatar Linux default theme
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/zaatar
+ScriptFile=/usr/share/plymouth/themes/zaatar/zaatar.script

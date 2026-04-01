@@ -1,1 +1,8 @@
-placeholder
+[Desktop Entry]
+Name=About Zaatar Linux
+Comment=Learn more about your operating system
+Exec=bash -c "echo 'Zaatar Linux'"
+Icon=zaatar-logo
+Terminal=false
+Type=Application
+Categories=System;

@@ -1,1 +1,5 @@
-placeholder
+title-text: "Zaatar Linux"
+title-font: "Sans Regular 16"
+message-font: "Sans Regular 14"
+message-color: "#ffffff"
+desktop-image: "background.png"

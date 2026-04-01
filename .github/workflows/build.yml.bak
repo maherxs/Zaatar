@@ -1,0 +1,222 @@
+name: "Build Zaatar Linux ISOs"
+
+on:
+  push:
+    branches: [main]
+  release:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: "Variant to build"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - desktop
+          - laptop
+          - server
+
+# ────────────────────────────────────────────────────────────
+# Variables
+# ────────────────────────────────────────────────────────────
+env:
+  DISTRO_NAME: "Zaatar Linux"
+  DISTRO_ID: "zaatar"
+  VERSION: "1.0"
+  FEDORA_RELEASE: "41"
+  ARCH: "x86_64"
+
+jobs:
+
+  # ── Job 1: Validate Kickstart files ──────────────────────
+  validate:
+    name: "Validate Kickstart Files"
+    runs-on: [self-hosted, fedora-builder]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pykickstart
+        run: sudo dnf install -y pykickstart
+
+      - name: Validate Desktop KS
+        run: ksvalidator kickstarts/zaatar-desktop.ks
+
+      - name: Report
+        run: echo "All Kickstart files validated successfully"
+
+  # ── Job 2: Build RPM Branding ─────────────────────────────
+  build-rpm:
+    name: "Build RPM Branding"
+    runs-on: [self-hosted, fedora-builder]
+    needs: validate
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install tools
+        run: sudo dnf install -y rpm-build rpmdevtools createrepo_c
+
+      - name: Setup rpmbuild tree
+        run: rpmdev-setuptree
+
+      - name: Copy spec and sources
+        run: |
+          cp rpm/zaatar-branding.spec ~/rpmbuild/SPECS/
+          cp -r rpm/SOURCES/* ~/rpmbuild/SOURCES/ 2>/dev/null || true
+
+      - name: Build RPM
+        run: rpmbuild -ba ~/rpmbuild/SPECS/zaatar-branding.spec
+
+      - name: Create local repo
+        run: |
+          mkdir -p ~/rpmbuild/RPMS/repo
+          cp ~/rpmbuild/RPMS/**/*.rpm ~/rpmbuild/RPMS/repo/ 2>/dev/null || true
+          createrepo_c ~/rpmbuild/RPMS/repo/
+
+      - name: Upload RPM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zaatar-branding-rpm
+          path: ~/rpmbuild/RPMS/**/*.rpm
+          retention-days: 7
+
+  # ── Job 3: Build ISOs ─────────────────────────────────────
+  build-iso:
+    name: "Build ISO — ${{ matrix.variant.name }}"
+    runs-on: [self-hosted, fedora-builder]
+    needs: build-rpm
+    strategy:
+      fail-fast: false
+      matrix:
+        variant:
+          - name: desktop
+            ks: kickstarts/zaatar-desktop.ks
+            iso: zaatar-desktop-1.0-x86_64.iso
+            volid: ZAATAR_DESKTOP
+            size_hint: "2.1 GB"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download RPM artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: zaatar-branding-rpm
+          path: ~/rpmbuild/RPMS/
+
+      - name: Rebuild local repo
+        run: createrepo_c ~/rpmbuild/RPMS/
+
+      - name: Install build tools
+        run: |
+          sudo dnf install -y \
+            lorax \
+            livecd-tools \
+            pykickstart \
+            isomd5sum \
+            anaconda \
+            anaconda-tui
+
+      - name: Create output directory
+        run: mkdir -p output/${{ matrix.variant.name }} /tmp/lmc-${{ matrix.variant.name }}
+
+      - name: Build ISO
+        run: |
+          sudo livemedia-creator \
+            --ks ${{ matrix.variant.ks }} \
+            --no-virt \
+            --resultdir output/${{ matrix.variant.name }} \
+            --project "${{ env.DISTRO_NAME }} (${{ matrix.variant.name }})" \
+            --make-iso \
+            --volid "${{ matrix.variant.volid }}" \
+            --iso-only \
+            --iso-name ${{ matrix.variant.iso }} \
+            --releasever ${{ env.FEDORA_RELEASE }} \
+            --tmp /tmp/lmc-${{ matrix.variant.name }}
+
+      - name: Calculate checksum
+        run: |
+          cd output/${{ matrix.variant.name }}
+          sha256sum ${{ matrix.variant.iso }} > ${{ matrix.variant.iso }}.sha256
+          echo "── Checksum ──"
+          cat ${{ matrix.variant.iso }}.sha256
+
+      - name: Get ISO size
+        run: |
+          SIZE=$(du -sh output/${{ matrix.variant.name }}/${{ matrix.variant.iso }} | cut -f1)
+          echo "ISO size: $SIZE"
+
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zaatar-${{ matrix.variant.name }}-iso
+          path: |
+            output/${{ matrix.variant.name }}/${{ matrix.variant.iso }}
+            output/${{ matrix.variant.name }}/${{ matrix.variant.iso }}.sha256
+          retention-days: 30
+
+  # ── Job 4: Publish to Release ─────────────────────────────
+  publish:
+    name: "Publish to GitHub Release"
+    runs-on: [self-hosted, fedora-builder]
+    needs: build-iso
+    if: github.event_name == 'release'
+    steps:
+      - name: Download Desktop ISO
+        uses: actions/download-artifact@v4
+        with:
+          name: zaatar-desktop-iso
+          path: release/
+
+      - name: Download Laptop ISO
+        uses: actions/download-artifact@v4
+        with:
+          name: zaatar-laptop-iso
+          path: release/
+
+      - name: Download Server ISO
+        uses: actions/download-artifact@v4
+        with:
+          name: zaatar-server-iso
+          path: release/
+
+      - name: Download RPM
+        uses: actions/download-artifact@v4
+        with:
+          name: zaatar-branding-rpm
+          path: release/
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release/**/*
+          body: |
+            ## Zaatar Linux ${{ env.VERSION }} (Thyme)
+            
+            Based on Fedora ${{ env.FEDORA_RELEASE }} · KDE Plasma · x86_64
+            
+            ### Editions
+            | Edition | File | Size |
+            |---------|------|------|
+            | Desktop | `zaatar-desktop-1.0-x86_64.iso` | ~2.1 GB |
+            | Laptop  | `zaatar-laptop-1.0-x86_64.iso`  | ~2.0 GB |
+            | Server  | `zaatar-server-1.0-x86_64.iso`  | ~850 MB |
+            
+            ### Verify
+            ```bash
+            sha256sum -c zaatar-desktop-1.0-x86_64.iso.sha256
+            sha256sum -c zaatar-laptop-1.0-x86_64.iso.sha256
+            sha256sum -c zaatar-server-1.0-x86_64.iso.sha256
+            ```
+            
+            ### Test before installing
+            ```bash
+            qemu-system-x86_64 -m 4G -enable-kvm \
+              -cdrom zaatar-desktop-1.0-x86_64.iso -boot d
+            ```
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

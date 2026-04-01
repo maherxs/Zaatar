@@ -1,24 +1,24 @@
 # Zaatar Linux 1.0 — Desktop Edition
 
-نظام لينكس مبني على Fedora 41 — KDE Plasma — Wayland
+A Linux system based on Fedora 41 — KDE Plasma — Wayland.
 
-## ما يحتويه النظام
+## Features
 - KDE Plasma (Wayland)
 - Firefox
 - WiFi + Bluetooth
 - Flatpak + Flathub
-- جدار حماية + تحديثات أمان تلقائية
-- دعم كامل للغة العربية والإنجليزية
-- كيبورد عربي/إنجليزي (Alt+Shift للتبديل)
-- اسم النظام: Zaatar Linux في كل مكان
+- Firewall + Automatic Security Updates
+- Full English language support
+- Standard US Keyboard Layout
+- System Name: Zaatar Linux across all interfaces
 
-## البناء
+## Build Instructions
 ```bash
-# على Fedora 41 كـ root
+# Run on Fedora 41 as root
 sudo bash build.sh
 ```
 
-## الاختبار
+## Testing
 ```bash
 qemu-system-x86_64 -m 4G -enable-kvm -boot d \
   -cdrom output/zaatar-desktop-1.0-x86_64.iso

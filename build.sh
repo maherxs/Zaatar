@@ -28,14 +28,14 @@ err()  { echo -e "${R} ✗${N} $1"; exit 1; }
 hr()   { echo -e "${C}$(printf '─%.0s' {1..60})${N}"; }
 
 # ── Root check ──────────────────────────────────────────────
-[[ $EUID -ne 0 ]] && err "شغّل كـ root: sudo bash build.sh"
+[[ $EUID -ne 0 ]] && err "Run as root: sudo bash build.sh"
 
 hr
 echo -e "${C}  ${NAME} ${VERSION} — Desktop Build${N}"
 hr
 
-# ── Step 1: تثبيت أدوات البناء ──────────────────────────────
-log "تثبيت أدوات البناء..."
+# ── Step 1: Install Build Tools ─────────────────────────────
+log "Installing build tools..."
 dnf install -y \
     lorax \
     livecd-tools \
@@ -46,11 +46,11 @@ dnf install -y \
     rpmdevtools \
     anaconda \
     anaconda-tui \
-    2>/dev/null || err "فشل تثبيت الأدوات"
-ok "الأدوات جاهزة"
+    2>/dev/null || err "Failed to install tools"
+ok "Tools are ready"
 
-# ── Step 2: بناء RPM Branding ────────────────────────────────
-log "بناء حزمة Branding..."
+# ── Step 2: Build RPM Branding ──────────────────────────────
+log "Building Branding RPM..."
 rpmdev-setuptree 2>/dev/null || true
 
 if [[ -f "$RPM_SPEC" ]]; then
@@ -61,19 +61,19 @@ if [[ -f "$RPM_SPEC" ]]; then
     mkdir -p ~/rpmbuild/RPMS/repo
     find ~/rpmbuild/RPMS -name "*.rpm" -exec cp {} ~/rpmbuild/RPMS/repo/ \; 2>/dev/null || true
     createrepo_c ~/rpmbuild/RPMS/repo/ -q
-    ok "RPM Branding جاهز"
+    ok "RPM Branding is ready"
 else
-    log "ملف .spec غير موجود — تجاوز (النظام سيعمل بدون برندينج مخصص)"
+    log ".spec file missing — skipping (system will work without custom branding)"
 fi
 
-# ── Step 3: التحقق من Kickstart ──────────────────────────────
-log "التحقق من ملف Kickstart..."
-[[ ! -f "$KS" ]] && err "الملف غير موجود: $KS"
-ksvalidator "$KS" || err "خطأ في ملف Kickstart"
-ok "Kickstart سليم"
+# ── Step 3: Validate Kickstart ──────────────────────────────
+log "Validating Kickstart file..."
+[[ ! -f "$KS" ]] && err "File not found: $KS"
+ksvalidator "$KS" || err "Kickstart file error"
+ok "Kickstart is valid"
 
-# ── Step 4: البناء ──────────────────────────────────────────
-log "بدء بناء ISO — قد يأخذ 30–90 دقيقة..."
+# ── Step 4: Build ───────────────────────────────────────────
+log "Starting ISO build — this may take 30–90 minutes..."
 mkdir -p "$OUT_DIR" "$BUILD_DIR"
 
 livemedia-creator \
@@ -87,22 +87,22 @@ livemedia-creator \
     --iso-name "$ISO_NAME" \
     --releasever "$FEDORA_RELEASE" \
     --tmp "$BUILD_DIR" \
-    || err "فشل البناء — راجع /var/log/anaconda/"
+    || err "Build failed — check /var/log/anaconda/"
 
-# ── Step 5: Checksum ─────────────────────────────────────────
-log "حساب Checksum..."
+# ── Step 5: Checksum ────────────────────────────────────────
+log "Calculating Checksum..."
 cd "$OUT_DIR"
 sha256sum "$ISO_NAME" > "${ISO_NAME}.sha256"
 SIZE=$(du -sh "$ISO_NAME" | cut -f1)
 
-# ── ملخص ────────────────────────────────────────────────────
+# ── Summary ─────────────────────────────────────────────────
 hr
-ok "اكتمل البناء!"
+ok "Build complete!"
 echo ""
 echo -e "  ${G}ISO:${N}    ${OUT_DIR}/${ISO_NAME} (${SIZE})"
 echo -e "  ${G}SHA256:${N} $(cut -d' ' -f1 ${ISO_NAME}.sha256)"
 echo ""
-echo -e "  اختبر قبل التثبيت:"
+echo -e "  Test before installing:"
 echo -e "  ${C}qemu-system-x86_64 -m 4G -enable-kvm -boot d -cdrom ${OUT_DIR}/${ISO_NAME}${N}"
 echo ""
 hr
